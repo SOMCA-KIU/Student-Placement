@@ -190,18 +190,28 @@ const CONFIG = {
   secret: "KIU-SMC-PLACEMENT-2026-CHANGE-ME",
 
   levels: ["Second Year", "Third Year"],
-  periods: ["November–December 2026"],
-  defaultPeriod: "November–December 2026",
+  periods: ["November 2026"],
 
   departments: {
     "Department of Information Technology": {
-      code: "IT", template: "it",
+      code: "IT", template: "short", bodyVariant: "it",
+      headerDept: "DEPARTMENT OF INFORMATION TECHNOLOGY",
+      defaultPeriod: "November 2026",
       programmes: ["Bachelor of Information Technology (BIT)", "Bachelor of Library and Information Science (BLIS)"],
       programmesConfirmed: true,
       head: { name: "Dr. Shefiu O. Ganiyu", title: "H.O.D - IT", org: [] }
     },
+    "Department of Computer Science": {
+      code: "CS", template: "short", bodyVariant: "cs",
+      headerDept: "DEPARTMENT OF COMPUTER SCIENCE",
+      defaultPeriod: "November 2026",
+      programmes: ["Bachelor of Computer Science (BCS)", "Diploma Computer Science (DCS)"],
+      programmesConfirmed: true,
+      head: { name: "Dr. Ramadhan B. Malinga", title: "H.O.D - CS", org: [] }
+    },
     "Department of Mathematics and Statistics": {
       code: "MS", template: "math",
+      defaultPeriod: "November 2026",
       programmes: ["Bachelor of Science in Statistics", "Bachelor of Science in Mathematics"], // NOT in sample letter — replace
       programmesConfirmed: false,
       head: { name: "Dr. Hafez Ibrahim", title: "Head of Department",
@@ -247,13 +257,14 @@ const deptSel = $("#dept"), progSel = $("#prog");
 Object.keys(CONFIG.departments).forEach(d => deptSel.add(new Option(d, d)));
 CONFIG.levels.forEach(l => $("#level").add(new Option(l, l)));
 CONFIG.periods.forEach(p => $("#period").add(new Option(p, p)));
-$("#period").value = CONFIG.defaultPeriod;
+$("#period").value = CONFIG.periods[0];
 deptSel.onchange = () => {
   const d = CONFIG.departments[deptSel.value];
   progSel.innerHTML = ""; progSel.disabled = !d;
   progSel.add(new Option(d ? "Select programme" : "Select department first", ""));
   if (d) d.programmes.forEach(p => progSel.add(new Option(p, p)));
   $("#progFlag").style.display = (d && !d.programmesConfirmed) ? "block" : "none";
+  if (d && d.defaultPeriod) $("#period").value = d.defaultPeriod;
   $("#periodHint").textContent = (d && d.template === "math")
     ? "Mathematics & Statistics letters ask for a period convenient to the host, so this window is recorded but not printed in the body."
     : "";
@@ -284,15 +295,15 @@ function mathHead(rec){ const d = new Date(rec.issued);
       <div class="addr">Fax: +256 (0) 41 - 501974 | www.kiu.ac.ug</div></div></div>
     <div class="rule-green"></div><div class="rule-gold"></div>
     <div class="meta"><span>Date: ${longDate(rec.issued)}</span><span>Ref: MS/${pad(d.getMonth()+1)}/${d.getFullYear()}</span></div>`; }
-function itHead(rec){ const d = new Date(rec.issued);
+function shortHead(rec, dept){ const d = new Date(rec.issued);
   return `<div class="lh">${LOGO_IMG}
     <div class="addr">Ggaba Road, Kansanga * PO BOX 20000 Kampala, Uganda<br>
       Tel: +256704572770/+256774808621 &nbsp;Fax: +256 (0) 41 &ndash; 501974<br>
       E-mail: dhdrinquiries@kiu.ac.ug * Website: http://www.kiu.ac.ug</div></div>
     <div class="rule-black"></div>
-    <div class="school">SCHOOL OF MATHEMATICS AND COMPUTING<br>DEPARTMENT OF INFORMATION TECHNOLOGY</div>
+    <div class="school">SCHOOL OF MATHEMATICS AND COMPUTING<br>${esc(dept.headerDept)}</div>
     <div class="date">Date: ${ddmmyyyy(rec.issued)}</div>
-    <div class="href">Our Ref/IT/${pad(d.getMonth()+1)}/${d.getFullYear()}</div>`; }
+    <div class="href">Our Ref/${dept.code}/${pad(d.getMonth()+1)}/${d.getFullYear()}</div>`; }
 function sigBlock(h){ return `<div class="sig"><div>Yours sincerely,</div><div class="line"></div>
   <div class="n">${esc(h.name)}</div><div>${esc(h.title)}</div>${h.org.map(l=>`<div>${esc(l)}</div>`).join("")}</div>`; }
 const footBlock = c => `<div class="foot"><div class="tag">&ldquo;Exploring the Heights&rdquo;</div>
@@ -301,9 +312,20 @@ const footBlock = c => `<div class="foot"><div class="tag">&ldquo;Exploring the 
 function renderLetter(rec){
   const dept = CONFIG.departments[rec.dept], head = dept.head;
   const toBlock = `<div class="to">To:\n${esc(rec.orgAddr ? rec.orgAddr + "\n" : "")}${esc(rec.org)}</div>`;
-  if (dept.template === "it"){
-    const word = rec.level.toLowerCase().replace(/\s+/g,"-");
-    return itHead(rec) + toBlock +
+  if (dept.template === "short"){
+    const head2 = shortHead(rec, dept);
+    if (dept.bodyVariant === "cs"){
+      const yr = rec.level.charAt(0) + rec.level.slice(1).toLowerCase();   // "Second year" / "Third year"
+      return head2 + toBlock +
+        `<p>Dear Sir/Madam,</p><div class="subject">SUBJECT: APPLICATION FOR INTERNSHIP PLACEMENT</div>
+         <div class="body"><p>This is to introduce to you Mr/Ms <b>${esc(rec.name)}</b></p>
+         <p>Reg No: <b>${esc(rec.reg)}</b> who is a <b>${yr}</b> student of ${esc(rec.prog)}.</p>
+         <p>The purpose of this letter is to kindly request you to grant him/her a place for internship training in your organization for the period of <b>${esc(rec.period)}</b>. During this time he/she is expected to abide by the rules and regulations of the organization. This will help him/her get acquainted with the apprenticeship of the required skills.</p>
+         <p>We appreciate all the assistance given and we shall be grateful if a letter of confirmation to this effect is availed.</p>
+         <p>We are always thankful for your cooperation.</p></div>` + sigBlock(head) + footBlock(rec.ref);
+    }
+    const word = rec.level.toLowerCase().replace(/\s+/g,"-");              // "second-year" / "third-year"
+    return head2 + toBlock +
       `<p>Dear Sir/Madam,</p><div class="subject">SUBJECT: APPLICATION FOR INTERNSHIP PLACEMENT</div>
        <div class="body"><p>This is to introduce to you</p><p>Mr/Ms <b>${esc(rec.name)}</b></p>
        <p>Reg No: <b>${esc(rec.reg)}</b> who is a <b>${word}</b> student of ${esc(rec.prog)}.</p>
@@ -350,7 +372,7 @@ $("#btnGen").onclick = async () => {
       return say($("#genMsg"),"bad",`Registration number <b>${esc(f.reg)}</b> has already been used ${r.max} times. No further letters can be generated for it.`);
     }
     if (!r.ok) return say($("#genMsg"),"bad","Could not save: " + (r.error || "unknown error") + ".");
-    $("#sheet").className = "sheet " + dept.template;
+    $("#sheet").className = "sheet " + (dept.template === "math" ? "math" : "it");
     $("#sheet").innerHTML = renderLetter(rec);
     $("#letterWrap").style.display = "block";
     $("#btnPrint").disabled = $("#btnNew").disabled = false;
@@ -362,7 +384,7 @@ $("#btnGen").onclick = async () => {
 $("#btnPrint").onclick = () => window.print();
 $("#btnNew").onclick = () => {
   ["fullName","regNo","org","orgAddr"].forEach(i => $("#"+i).value = "");
-  deptSel.value = ""; deptSel.onchange(); $("#level").value = ""; $("#period").value = CONFIG.defaultPeriod;
+  deptSel.value = ""; deptSel.onchange(); $("#level").value = ""; $("#period").value = CONFIG.periods[0];
   $("#letterWrap").style.display = "none"; $("#genMsg").className = "msg";
   $("#btnPrint").disabled = $("#btnNew").disabled = true; window.scrollTo({top:0,behavior:"smooth"});
 };
